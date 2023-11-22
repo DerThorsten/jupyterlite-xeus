@@ -120,8 +120,7 @@ src/*.js
 src/xpython_wasm.js
 src/xpython_wasm.wasm
 src/xpython_wasm.hash
-src/worker.ts
-src/web_worker_kernel.ts
+
 src/*.tar.gz
 src/empack_env_meta.json
 *.js.map

@@ -15,20 +15,41 @@ import { WebWorkerKernel } from './web_worker_kernel';
 import logo32 from '!!file-loader?context=.!../style/logos/python-logo-32x32.png';
 import logo64 from '!!file-loader?context=.!../style/logos/python-logo-64x64.png';
 
-// 
-const kernels_specs = [
-  {
-    name: 'xlite',
-    dir: 'xlite',
-    display_name: 'xlite',
-    language: 'python',
+
+const xhr = new XMLHttpRequest();
+const json_url = '../extensions/@jupyterlite/xeus-python-kernel/static/xlite/kernels.json'
+xhr.open("GET", json_url, false);
+xhr.send(null);
+const kernel_names = JSON.parse(xhr.responseText);
+console.log(kernel_names);
+
+// create kernelspecs from kernels.json
+
+function name2lang(name) {
+  if (name == "xlite") {
+    return "bash";
+  } else if (name == "xlua") {
+    return "lua";
+  } else {
+    return "unknown";
+  }
+}
+
+
+const kernels_specs = kernel_names.map((kernel_name) => {
+  let spec = {
+    name: kernel_name,
+    dir: kernel_name,
+    display_name: kernel_name,
+    language: name2lang(kernel_name),
     argv: [],
     resources: {
       'logo-32x32': logo32,
       'logo-64x64': logo64
     }
   }
-];
+  return spec;
+});
 
 
 const server_kernels = kernels_specs.map((spec) => {
