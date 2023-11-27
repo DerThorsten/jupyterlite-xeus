@@ -173,8 +173,9 @@ class XeusKernel {
 
   private async initialize() {
     const dir = this._spec.dir;
-    const THE_WASM_KERNEL_FILE = `xlite/${dir}/${dir}.js`;
-    const THE_WASM_FILE = `xlite/${dir}/${dir}.wasm`;
+    const wasm_name = this._spec.metadata.wasm_name;
+    const THE_WASM_KERNEL_FILE = `kernels/${dir}/${wasm_name}.js`;
+    const THE_WASM_FILE = `kernels/${dir}/${wasm_name}.wasm`;
     console.log('importScripts', THE_WASM_KERNEL_FILE, THE_WASM_FILE);
     importScripts(THE_WASM_KERNEL_FILE);
 
@@ -188,10 +189,21 @@ class XeusKernel {
     });
     try {
 
-      if(globalThis.Module.async_init) {
-        await globalThis.Module.async_init();
+      await this.waitRunDependency();
+      console.log(globalThis.Module);
+
+      if(globalThis.Module['async_init'] !== undefined) {
+        console.log('!!!async_init!!!!');
+        const kernel_root_url=`kernels/${dir}`
+        const pkg_root_url = `kernel_packages`
+        console.log("with kernel_root_url", kernel_root_url, "and pkg_root_url", pkg_root_url);
+        const verbose = true;
+        await globalThis.Module['async_init'](kernel_root_url,pkg_root_url, verbose);
       }
-            
+      else{
+        console.log('!!!NO async_init!!!!');
+      }
+      
       await this.waitRunDependency();
       
       this._raw_xkernel = new globalThis.Module.xkernel();
@@ -199,7 +211,9 @@ class XeusKernel {
       if (!this._raw_xkernel) {
         console.error('Failed to start kernel!');
       }
+      console.log('!!!start!!!');
       this._raw_xkernel.start();
+      console.log('!!!start-DONE!!!');
     }
     catch (e) {
         if( typeof e === 'number' ) {
