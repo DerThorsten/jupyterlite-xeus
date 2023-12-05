@@ -2,21 +2,11 @@ from pathlib import Path
 from empack.pack import DEFAULT_CONFIG_PATH, pack_env
 from empack.file_patterns import pkg_file_filter_from_yaml
 
-from .xlite import XLiteBuilderBase
-
-class XLiteBuilderBase:
-    def __init__(self, addon,kernel_name, static_dir):
-        self.addon = addon
-        self.kernel_name = kernel_name
-        self.static_dir = static_dir
-        self.packages_dir = Path(self.static_dir) / "kernel_packages"
-
-    
-    def build(self, kernel_dir):
-        yield 
+from .prefix_bundler_base import PrefixBundlerBase
 
 
-class XPythonBuilder(XLiteBuilderBase):
+
+class EmpackBundler(PrefixBundlerBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

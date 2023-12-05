@@ -14,7 +14,7 @@ from jupyterlite_core.constants import (
 )
 from traitlets import List, Unicode
 
-from .xlite import get_xlite_builder
+from .prefix_bundler import get_prefix_bundler
 from .create_conda_env import create_conda_env_from_yaml
 
 EXTENSION_NAME = "xeus-python-kernel"
@@ -68,6 +68,7 @@ class XeusAddon(FederatedExtensionAddon):
             yield from self.create_and_copy_from_env(manager,  environment_file=self.environment_file)
     
     def create_and_copy_from_env(self, manager, environment_file):
+        print("environment_file", environment_file)
         # read the environment file
         root_prefix = Path(self.cwd.name) / "env"
         env_name = "xeus-python"
@@ -115,14 +116,49 @@ class XeusAddon(FederatedExtensionAddon):
 
     def copy_kernel(self, kernel_dir, static_dir):
         kernel_spec = json.loads((kernel_dir / "kernel.json").read_text(**UTF8))
-        language = kernel_spec["language"].lower()
-        builder = get_xlite_builder(language)
-        builder = builder(addon=self, kernel_name=kernel_dir.name, static_dir=static_dir)
+
         
+        # copy the kernels content:
+        # from: share/jupyter/kernels/<kernel_name> 
+        # to: static/kernels/<kernel_name>
+        #  This is must at least be:
+        #  * the *.wasm  and *js files of the kernel (ie emscripten generated files)
+        #  * the kernel.json file (with the correct path to the wasm file in the metadata)
+        #  * the 2 logo files (logo-32x32.png and logo-64x64.png)
         yield dict(
             name=f"xeus:copy_kernel:{kernel_dir.name}",
             actions=[(self.copy_one, [kernel_dir, static_dir / "kernels"/ kernel_dir.name ])],
         )
-        for item in builder.build(kernel_dir=static_dir / "kernels"/ kernel_dir.name):
+
+        # this part is a bit more complicated:
+        # Some kernels expect certain files to be at a certain places on the hard drive.
+        # Ie python (even pure python without additional packages) expects to find certail *.py
+        # files in a dir like $PREFIX/lib/python3.11/... .
+        # Since the kernels run in the browser we need a way to take the needed files from the
+        # $PREFIX of the emscripten-32 wasm env, bundle them into smth like  tar.gz file(s) and
+        # copy them to the static/kernels/<kernel_name> dir.
+        #
+        # this concept of taking a prefix and turning it into something the kernels 
+        # can consume is called a "bundler" in this context. 
+        # At the moment, only xpython needs such a bundler, but this is likely to change in the future.
+        # therefore we do the following. Each kernel can specify which bundler it needs in its kernel.json file.
+        # If no bundler is specified, we assume that the default bundler is used (which does nothing atm).
+
+        language = kernel_spec["language"].lower()
+        prefix_bundler_name = kernel_spec["metadata"].get("prefix_bundler", None)
+        prefix_bundler_kwargs = kernel_spec["metadata"].get("prefix_bundler_kwargs", dict())
+
+
+        # THIS WILL BE REMOVED ONCE THE NEXT VERSION OF XPYTHON IS RELEASED
+        # (and the kernel.json file contains the prefix_bundler info)
+        if language == "python":
+            prefix_bundler_name = "empack"
+
+        
+
+        prefix_bundler = get_prefix_bundler(name=prefix_bundler_name)
+        prefix_bundler = prefix_bundler(addon=self, kernel_name=kernel_dir.name, static_dir=static_dir, **prefix_bundler_kwargs)
+        
+        for item in prefix_bundler.build(kernel_dir=static_dir / "kernels"/ kernel_dir.name):
             if item:
                 yield item

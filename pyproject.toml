@@ -39,7 +39,7 @@ dev = [
 # jupyterlite-xeus-python-build = "jupyterlite_xeus_python.build:start"
 
 [project.entry-points."jupyterlite.addon.v0"]
-jupyterlite-xeus-python = "jupyterlite_xeus_python.add_on:XeusKernelLoaderAddon"
+jupyterlite-xeus-python = "jupyterlite_xeus_python.add_on:XeusAddon"
 
 [tool.hatch.version]
 source = "nodejs"
