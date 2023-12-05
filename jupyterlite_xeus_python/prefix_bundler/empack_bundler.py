@@ -11,15 +11,15 @@ class EmpackBundler(PrefixBundlerBase):
         super().__init__(*args, **kwargs)
 
 
-    def build(self, kernel_dir):
+    def build(self):
 
-        prefix_path = Path(self.addon.prefix)
+        prefix_path = Path(self.prefix)
 
         # temp dir for the packed env
-        out_path = Path(self.addon.cwd.name) / "packed_env"
+        out_path = Path(self.cwd.name) / "packed_env"
         out_path.mkdir(parents=True, exist_ok=True)
 
-        # Pack the environment
+        # Pack the environment (TODO make this configurable)
         file_filters = pkg_file_filter_from_yaml(DEFAULT_CONFIG_PATH)
 
         pack_env(
@@ -36,7 +36,7 @@ class EmpackBundler(PrefixBundlerBase):
             if pkg_path.name.endswith(".tar.gz"):
                 yield dict(
                     name=f"xeus:{self.kernel_name}:copy_package:{pkg_path.name}",
-                    actions=[(self.addon.copy_one, [pkg_path, self.packages_dir / pkg_path.name ])],
+                    actions=[(self.copy_one, [pkg_path, self.packages_dir / pkg_path.name ])],
                 )
 
         # copy the empack_env_meta.json
@@ -44,5 +44,5 @@ class EmpackBundler(PrefixBundlerBase):
         empack_env_meta = "empack_env_meta.json"
         yield dict(
             name=f"xeus:{self.kernel_name}:copy_env_file:{empack_env_meta}",
-            actions=[(self.addon.copy_one, [out_path / empack_env_meta, Path(kernel_dir)/ empack_env_meta ])],
+            actions=[(self.copy_one, [out_path / empack_env_meta, Path(self.kernel_dir)/ empack_env_meta ])],
         )

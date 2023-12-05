@@ -53,7 +53,7 @@ class XeusAddon(FederatedExtensionAddon):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        self.static_dir = self.output_extensions / STATIC_DIR
         self.cwd = TemporaryDirectory()
     
     def post_build(self, manager):
@@ -61,14 +61,15 @@ class XeusAddon(FederatedExtensionAddon):
         # from prefix has higher priority than from environment file
         if self.prefix:
             # from existing prefix
-            yield from self.copy_kernels_from_prefix(manager, prefix=self.prefix)
-        else:
+            yield from self.copy_kernels_from_prefix()
+        elif self.environment_file:
             # from environment file
-            
-            yield from self.create_and_copy_from_env(manager,  environment_file=self.environment_file)
+            yield from self.create_and_copy_from_env()
+        else:
+            raise ValueError("Either prefix or environment_file must be set")
     
-    def create_and_copy_from_env(self, manager, environment_file):
-        print("environment_file", environment_file)
+    def create_and_copy_from_env(self):
+        print("environment_file", self.environment_file)
         # read the environment file
         root_prefix = Path(self.cwd.name) / "env"
         env_name = "xeus-python"
@@ -77,44 +78,40 @@ class XeusAddon(FederatedExtensionAddon):
         create_conda_env_from_yaml(
             env_name=env_name,
             root_prefix=root_prefix,
-            env_file=environment_file,
+            env_file=self.environment_file,
         )
-        yield from self.copy_kernels_from_prefix(manager, prefix=env_prefix)
+        yield from self.copy_kernels_from_prefix()
        
         
 
-    def copy_kernels_from_prefix(self, manager, prefix):
-        static_dir = self.output_extensions / STATIC_DIR
+    def copy_kernels_from_prefix(self):
         
-        if not os.path.exists(prefix) or not os.path.isdir(prefix):
-            raise ValueError(f"Prefix {prefix} does not exist or is not a directory")
+        if not os.path.exists(self.prefix) or not os.path.isdir(self.prefix):
+            raise ValueError(f"Prefix {self.prefix} does not exist or is not a directory")
 
-        kernel_spec_path = Path(prefix) / "share" / "jupyter" / "kernels"
+        kernel_spec_path = Path(self.prefix) / "share" / "jupyter" / "kernels"
 
 
         all_kernels = []
         # find all folders in the kernelspec path
         for kernel_dir in kernel_spec_path.iterdir():
-            print("considering kernel_dir", kernel_dir, is_kernel_dir(kernel_dir))
             if is_kernel_dir(kernel_dir):      
-
                 all_kernels.append(kernel_dir.name)
-
                 # take care of each kernel
-                yield from self.copy_kernel(kernel_dir, static_dir)
+                yield from self.copy_kernel(kernel_dir)
 
         # write the kernels.json file
         kernel_file = Path(self.cwd.name) / "kernels.json"
         kernel_file.write_text(json.dumps(all_kernels), **UTF8)
         yield dict(
             name=f"xeus:copy:kernels.json",
-            actions=[(self.copy_one, [kernel_file, static_dir /"kernels"/ "kernels.json" ])],
+            actions=[(self.copy_one, [kernel_file, self.static_dir /"kernels"/ "kernels.json" ])],
         )
 
 
 
 
-    def copy_kernel(self, kernel_dir, static_dir):
+    def copy_kernel(self, kernel_dir):
         kernel_spec = json.loads((kernel_dir / "kernel.json").read_text(**UTF8))
 
         
@@ -127,7 +124,7 @@ class XeusAddon(FederatedExtensionAddon):
         #  * the 2 logo files (logo-32x32.png and logo-64x64.png)
         yield dict(
             name=f"xeus:copy_kernel:{kernel_dir.name}",
-            actions=[(self.copy_one, [kernel_dir, static_dir / "kernels"/ kernel_dir.name ])],
+            actions=[(self.copy_one, [kernel_dir, self.static_dir / "kernels"/ kernel_dir.name ])],
         )
 
         # this part is a bit more complicated:
@@ -156,9 +153,13 @@ class XeusAddon(FederatedExtensionAddon):
 
         
 
-        prefix_bundler = get_prefix_bundler(name=prefix_bundler_name)
-        prefix_bundler = prefix_bundler(addon=self, kernel_name=kernel_dir.name, static_dir=static_dir, **prefix_bundler_kwargs)
+        prefix_bundler = get_prefix_bundler(
+            addon=self,
+            prefix_bundler_name=prefix_bundler_name,
+            kernel_name=kernel_dir.name,
+            **prefix_bundler_kwargs
+        )
         
-        for item in prefix_bundler.build(kernel_dir=static_dir / "kernels"/ kernel_dir.name):
+        for item in prefix_bundler.build():
             if item:
                 yield item
