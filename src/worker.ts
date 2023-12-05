@@ -193,17 +193,12 @@ class XeusKernel {
       console.log(globalThis.Module);
 
       if(globalThis.Module['async_init'] !== undefined) {
-        console.log('!!!async_init!!!!');
         const kernel_root_url=`kernels/${dir}`
         const pkg_root_url = `kernel_packages`
-        console.log("with kernel_root_url", kernel_root_url, "and pkg_root_url", pkg_root_url);
         const verbose = true;
-        await globalThis.Module['async_init'](kernel_root_url,pkg_root_url, verbose);
+        await globalThis.Module['async_init'](kernel_root_url, pkg_root_url, verbose);
       }
-      else{
-        console.log('!!!NO async_init!!!!');
-      }
-      
+
       await this.waitRunDependency();
       
       this._raw_xkernel = new globalThis.Module.xkernel();
