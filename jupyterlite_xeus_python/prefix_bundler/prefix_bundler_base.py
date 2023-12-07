@@ -12,8 +12,8 @@ class PrefixBundlerBase:
         self.prefix = addon.prefix
         self.kernel_name = kernel_name
         self.static_dir = addon.static_dir
-        self.packages_dir = Path(self.static_dir) / "kernel_packages"
-        self.kernel_dir = addon.static_dir / "kernels"/ kernel_name
+        self.packages_dir = Path(self.static_dir) / "share" / "jupyter" / "kernel_packages"
+        self.kernel_dir = Path(addon.static_dir) / "share"/ "jupyter"/"kernels"/ kernel_name
     
     def build(self):
         raise NotImplementedError("build method must be implemented by subclass")

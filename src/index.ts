@@ -28,11 +28,11 @@ function getPkgJson(url: string) {
 
 let kernel_dir : string[] = [];
 try{
-  kernel_dir = getPkgJson("kernels/kernels.json")
+  kernel_dir = getPkgJson("share/jupyter/kernels.json")
 }
 catch(err){
   console.log(err);
-  console.log("could not fetch kernels.json");
+  console.log("could not fetch share/jupyter/kernels/kernels.json");
   kernel_dir = []
   throw err;
 }
@@ -40,12 +40,12 @@ console.log(kernel_dir);
 
 // fetch kernel spec for each kernel
 const kernel_specs = kernel_dir.map((kernel_dir) => {
-  let spec : any =  getPkgJson("kernels/" + kernel_dir + "/kernel.json")
+  let spec : any =  getPkgJson("share/jupyter/kernels/" + kernel_dir + "/kernel.json")
   spec.name = kernel_dir;
   spec.dir = kernel_dir;
   spec.resources = {
-    'logo-32x32': rel_path + "kernels/" + kernel_dir + "/logo-32x32.png",
-    'logo-64x64': rel_path + "kernels/" + kernel_dir + "/logo-64x64.png",
+    'logo-32x32': rel_path + "share/jupyter/kernels/" + kernel_dir + "/logo-32x32.png",
+    'logo-64x64': rel_path + "share/jupyter/kernels/" + kernel_dir + "/logo-64x64.png",
   }
   return spec;
 });
